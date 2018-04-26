@@ -20,6 +20,9 @@ import java.util.List;
  */
 public class LibroController {
     Connection conn;
+    
+    public static int OCUPADO = 0;
+    public static int DISPONIBLE = 1;
 
     public LibroController() {
         conn = new ConnectionDB().getConn();
@@ -29,6 +32,31 @@ public class LibroController {
         List<Libro> resp = new ArrayList<>();
         try {
             PreparedStatement cmd = this.conn.prepareStatement("SELECT * FROM libros");
+            ResultSet rs = cmd.executeQuery();
+            while (rs.next()) {
+                resp.add(new Libro(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getInt(5), rs.getInt(6)));
+            }
+        } catch (SQLException ex) {
+            System.err.println("Error al consultar libros: " + ex.getMessage());
+        } finally {
+            try {
+                if (this.conn != null) {
+                    if (!this.conn.isClosed()) {
+                        this.conn.close();
+                    }
+                }
+            } catch (SQLException ex) {
+                System.err.println("Error al cerrar la conexión al consultar libros: " + ex.getMessage());
+            }
+        }
+        return resp;
+    }
+    
+    public List<Libro> getByState(int esta_libr) {
+        List<Libro> resp = new ArrayList<>();
+        try {
+            PreparedStatement cmd = this.conn.prepareStatement("SELECT * FROM libros WHERE esta_libr = ?");
+            cmd.setInt(1, esta_libr);
             ResultSet rs = cmd.executeQuery();
             while (rs.next()) {
                 resp.add(new Libro(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getInt(5), rs.getInt(6)));
@@ -71,6 +99,32 @@ public class LibroController {
                 System.err.println("Error al cerrar la conexión al consultar libro: " + ex.getMessage());
             }
         }
+        return resp;
+    }
+    
+    public boolean update(int id, int esta_libr) {
+        boolean resp = false;
+        
+        try {
+            PreparedStatement cmd = this.conn.prepareStatement("UPDATE libros SET esta_libr = ? WHERE codi_libr = ?");
+            cmd.setInt(1, esta_libr);
+            cmd.setInt(2, id);
+            cmd.executeUpdate();
+            resp = true;
+        } catch (Exception ex) {
+            System.err.println("Error al modificar libro " + ex.getMessage());
+        } finally {
+            try {
+                if (this.conn != null) {
+                    if (!this.conn.isClosed()) {
+                        this.conn.close();
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Error al cerrar la conexion al modificar libro : " + e.getMessage());
+            }
+        }
+        
         return resp;
     }
 }

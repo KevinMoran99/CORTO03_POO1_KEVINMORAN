@@ -18,8 +18,8 @@ public class Utils {
     
     public static String formatDate (Date date, int type) {
         if (type == Utils.DATE_UI)
-            return new SimpleDateFormat("dd/MM/yyyy").format(date);
+            return new SimpleDateFormat("dd/MM/yyyy HH:mm").format(date);
         else
-            return new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(date);
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
     }
 }

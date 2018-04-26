@@ -9,7 +9,9 @@ import com.sv.udb.controllers.LibroController;
 import com.sv.udb.controllers.PrestamoController;
 import com.sv.udb.controllers.UsuarioController;
 import com.sv.udb.models.Libro;
+import com.sv.udb.models.Prestamo;
 import com.sv.udb.models.Usuario;
+import com.sv.udb.utilities.Utils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.ParseException;
@@ -54,25 +56,81 @@ public class PrestamoServlet extends HttpServlet {
             else {
                 String CRUD = request.getParameter("presBtn");
                 if(CRUD.equals("Prestar")) {
-                    Usuario usuario = new UsuarioController().get(Integer.parseInt(request.getParameter("libro")));
-                    Libro libro = new LibroController().get(Integer.parseInt(request.getParameter("usuario")));
-                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm");
+                    Usuario usuario = new UsuarioController().get(Integer.parseInt(request.getParameter("usuario")));
+                    Libro libro = new LibroController().get(Integer.parseInt(request.getParameter("libro")));
+                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'kk:mm");
                     Date fecha = format.parse(request.getParameter("fecha"));
                     
-                    if (new PrestamoController().save(libro, usuario, fecha))
-                        message = "Datos guardados";
+                    if (new PrestamoController().save(libro, usuario, fecha)) {
+                        
+                        //Actualizando disponibilidad de libro
+                        if (new LibroController().update(Integer.parseInt(request.getParameter("libro")), LibroController.OCUPADO)) {
+                            message = "Libro prestado";
+                        }
+                        else {
+                            message = "Préstamo guardado; error al actualizar libro";
+                            error = true;
+                        }
+                    }
+                    else {
+                        message = "Error al guardar";
+                        error = true;
+                    }
+                }
+                else if (CRUD.equals("Consultar")) {
+                    int code = Integer.parseInt(request.getParameter("codiPres") == null ? "-1" : request.getParameter("codiPres"));
+                    Prestamo pres = new PrestamoController().get(code);
+                    if (pres != null) {
+                        request.setAttribute("codi_pres", pres.getCodi_pres());
+                        request.setAttribute("libr", pres.getLibr());
+                        request.setAttribute("usua", pres.getUsua());
+                        request.setAttribute("fech_pres", pres.getFech_pres());
+                        if (pres.getFech_devo() != null) {
+                            request.setAttribute("fech_devo", pres.getFech_devo());
+                        }
+
+                        message = "Información consultada";
+
+                        request.setAttribute("update", "true");
+                        
+                    }
+                    else {
+                        message = "Error al consultar";
+                        error = true;
+                    }
+                }
+                else if(CRUD.equals("Devolver")) {
+                    int id = Integer.parseInt(request.getParameter("id"));
+                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'kk:mm");
+                    Date fecha = format.parse(request.getParameter("fecha"));
+                    
+                    if (new PrestamoController().update(id, fecha)) {
+                        
+                        Prestamo pres = new PrestamoController().get(id);
+                        
+                        //Actualizando disponibilidad de libro
+                        if (new LibroController().update(pres.getLibr().getCodi_libr(), LibroController.DISPONIBLE)) {
+                            message = "Libro devuelto";
+                        }
+                        else {
+                            message = "Préstamo concluido; error al actualizar libro";
+                            error = true;
+                        }
+                    }
                     else {
                         message = "Error al guardar";
                         error = true;
                     }
                 }
                 
+                request.setAttribute("tab", 1);
                 request.setAttribute("message", message);
                 request.setAttribute("error", error);
                 request.getRequestDispatcher("/index.jsp").forward(request, response);
             }
         } catch (ParseException ex) {
             Logger.getLogger(PrestamoServlet.class.getName()).log(Level.SEVERE, null, ex);
+            System.err.println(ex.getMessage());
         } catch (Exception e) {
             System.err.println(e.getMessage());
             //throw new ServletException(e);
